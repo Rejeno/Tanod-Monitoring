@@ -1,22 +1,13 @@
-import { FacebookAuthProvider, getAuth, signInWithPopup } from "firebase/auth";
-import app from "./firebase";
+// lib/auth.ts
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { auth } from "./firebase";
 
-// Initialize Auth
-const auth = getAuth(app);
-
-// Initialize Facebook Provider
-const provider = new FacebookAuthProvider();
-
-// Function to sign in with Facebook
-export const signInWithFacebook = async () => {
+export const loginWithEmail = async (email: string, password: string) => {
   try {
-    const result = await signInWithPopup(auth, provider);
-    // Access user info
-    const user = result.user;
-    console.log("User info:", user);
-    return user;
+    const userCredential = await signInWithEmailAndPassword(auth, email, password);
+    return userCredential.user;
   } catch (error) {
-    console.error("Facebook login error:", error);
+    console.error("Login error:", error);
     throw error;
   }
 };
