@@ -8,161 +8,136 @@ import {
   query,
   where,
 } from "firebase/firestore";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 
-interface User {
-  uid: string;
-  name: string;
-}
-
-interface TimeRecord {
+interface EmergencyReport {
   id: string;
-  type: "in" | "out";
-  timestamp: Date;
-  location: string;
-}
-
-interface EventReport {
-  id: string;
-  logType: "normal" | "emergency";
+  uid: string; // tanod user id who reported
   description: string;
+  location: string;
   timestamp: Date;
 }
 
-export default function AdminTanodList() {
-  const [tanods, setTanods] = useState<User[]>([]);
-  const [expanded, setExpanded] = useState<string | null>(null); // uid of expanded user
-  const [attendance, setAttendance] = useState<Record<string, TimeRecord[]>>(
-    {}
-  );
-  const [reports, setReports] = useState<Record<string, EventReport[]>>({});
+export default function AdminDashboard() {
+  const [emergencyReports, setEmergencyReports] = useState<EmergencyReport[]>([]);
+  const [tanodNames, setTanodNames] = useState<Record<string, string>>({});
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Fetch all tanods (users with role 'tanod')
   useEffect(() => {
-    const fetchTanods = async () => {
-      const q = query(
-        collection(db, "users"),
-        where("role", "==", "tanod"),
-        orderBy("displayName")
-      );
-      const snapshot = await getDocs(q);
-      const users: User[] = [];
-      snapshot.forEach((doc) => {
-        const data = doc.data();
-        users.push({
-          uid: doc.id,
-          name: data.displayName || "No name",
+    async function fetchData() {
+      try {
+        setLoading(true);
+        // 1. Fetch emergency reports ordered by timestamp descending
+        const reportsQuery = query(
+          collection(db, "eventReports"),
+          where("logType", "==", "emergency"),
+          orderBy("timestamp", "desc")
+        );
+        const reportsSnapshot = await getDocs(reportsQuery);
+
+        // Map docs to array of reports
+        const reportsData: EmergencyReport[] = reportsSnapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            uid: data.uid,
+            description: data.content,
+            location: data.location || "Unknown location",
+            timestamp: data.timestamp.toDate(),
+          };
         });
-      });
-      setTanods(users);
-    };
-    fetchTanods();
+
+        setEmergencyReports(reportsData);
+
+        // 2. Fetch all tanods for name resolution
+        const allTanodsQuery = query(
+          collection(db, "users"),
+          where("role", "==", "tanod")
+        );
+        const usersSnapshot = await getDocs(allTanodsQuery);
+
+        // Map uid => displayName
+        const namesMap: Record<string, string> = {};
+        usersSnapshot.forEach(doc => {
+          const data = doc.data();
+          namesMap[doc.id] = data.displayName || "No name";
+        });
+        setTanodNames(namesMap);
+
+        setLoading(false);
+      } catch (e) {
+        console.error(e);
+        setError("Failed to load emergency reports.");
+        setLoading(false);
+      }
+    }
+
+    fetchData();
   }, []);
 
-  // Fetch attendance and reports for expanded user
-  useEffect(() => {
-    if (!expanded) return;
-
-    const fetchAttendance = async () => {
-      const q = query(
-        collection(db, "attendanceLogs"),
-        where("uid", "==", expanded),
-        orderBy("timestamp", "desc")
-      );
-      const snapshot = await getDocs(q);
-      const records: TimeRecord[] = [];
-      snapshot.forEach((doc) => {
-        const data = doc.data();
-        records.push({
-          id: doc.id,
-          type: data.type,
-          timestamp: data.timestamp.toDate(),
-          location: data.location || "",
-        });
-      });
-      setAttendance((prev) => ({ ...prev, [expanded]: records }));
-    };
-
-    const fetchReports = async () => {
-      const q = query(
-        collection(db, "eventReports"),
-        where("uid", "==", expanded),
-        orderBy("timestamp", "desc")
-      );
-      const snapshot = await getDocs(q);
-      const recs: EventReport[] = [];
-      snapshot.forEach((doc) => {
-        const data = doc.data();
-        recs.push({
-          id: doc.id,
-          logType: data.logType,
-          description: data.description,
-          timestamp: data.timestamp.toDate(),
-        });
-      });
-      setReports((prev) => ({ ...prev, [expanded]: recs }));
-    };
-
-    fetchAttendance();
-    fetchReports();
-  }, [expanded]);
-
   return (
-    <div className="p-4 max-w-4xl mx-auto">
-      <h1 className="text-2xl font-bold mb-6">Tanod List</h1>
-      {tanods.length === 0 && <p>No tanods found.</p>}
+    <div className="max-w-md mx-auto p-4 min-h-screen bg-white flex flex-col">
+      <header className="mb-6">
+        <h1 className="text-2xl font-bold text-center mb-4">
+          Admin Dashboard - Emergency Reports
+        </h1>
+        <nav className="flex justify-center space-x-4">
+          <Link
+            href="/tanod-list"
+            className="bg-blue-600 text-white px-4 py-2 rounded shadow hover:bg-blue-700 transition"
+          >
+            Tanods
+          </Link>
+          <Link
+            href="/report-list"
+            className="bg-blue-600 text-white px-4 py-2 rounded shadow hover:bg-blue-700 transition"
+          >
+            Reports
+          </Link>
+        </nav>
+      </header>
 
-      <ul className="space-y-4">
-        {tanods.map((tanod) => {
-          const isOpen = expanded === tanod.uid;
-          return (
-            <li key={tanod.uid} className="border rounded p-3">
-              <button
-                onClick={() => setExpanded(isOpen ? null : tanod.uid)}
-                className="text-left w-full font-semibold text-lg"
-                aria-expanded={isOpen}
-              >
-                {tanod.name}
-              </button>
+      {loading && (
+        <p className="text-center text-gray-600">Loading emergency reports...</p>
+      )}
+      {error && (
+        <p className="text-center text-red-600 font-semibold">{error}</p>
+      )}
 
-              {isOpen && (
-                <div className="mt-3 pl-4">
-                  <h3 className="font-semibold mb-1">Attendance Logs:</h3>
-                  {attendance[tanod.uid]?.length ? (
-                    <ul className="list-disc pl-5 mb-4">
-                      {attendance[tanod.uid].map((rec) => (
-                        <li key={rec.id}>
-                          <strong>{rec.type === "in" ? "Time In" : "Time Out"}</strong>{" "}
-                          - {rec.timestamp.toLocaleString()} - Location: {rec.location}
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p>No attendance records.</p>
-                  )}
-
-                  <h3 className="font-semibold mb-1">Event Reports:</h3>
-                  {reports[tanod.uid]?.length ? (
-                    <ul className="list-disc pl-5">
-                      {reports[tanod.uid].map((rep) => (
-                        <li
-                          key={rep.id}
-                          className={rep.logType === "emergency" ? "text-red-600 font-bold" : ""}
-                        >
-                          [{rep.logType.toUpperCase()}] {rep.description} -{" "}
-                          {rep.timestamp.toLocaleString()}
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <p>No event reports.</p>
-                  )}
-                </div>
-              )}
-            </li>
-          );
-        })}
-      </ul>
+      {!loading && !error && (
+        <>
+          {emergencyReports.length === 0 ? (
+            <p className="text-center text-gray-600">
+              No emergency reports found.
+            </p>
+          ) : (
+            <ul className="space-y-4 overflow-y-auto" style={{ maxHeight: "70vh" }}>
+              {emergencyReports.map((report) => (
+                <li
+                  key={report.id}
+                  className="border rounded p-4 bg-red-50 border-red-400 shadow-sm"
+                >
+                  <div className="flex justify-between items-center mb-2">
+                    <h2 className="text-lg font-semibold text-red-700">
+                      🚨 Emergency Report
+                    </h2>
+                    <time className="text-sm text-gray-500">
+                      {report.timestamp.toLocaleString()}
+                    </time>
+                  </div>
+                  <p className="mb-2 text-gray-800">{report.description}</p>
+                  <p className="text-sm text-gray-700 font-medium">
+                    From: {tanodNames[report.uid] || report.uid}
+                  </p>
+                  <p className="text-sm text-gray-600">Location: {report.location}</p>
+                </li>
+              ))}
+            </ul>
+          )}
+        </>
+      )}
     </div>
   );
 }

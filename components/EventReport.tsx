@@ -9,6 +9,7 @@ interface Report {
   content: string;
   logType: "normal" | "emergency";
   timestamp: Date;
+  location: string; // add location field here
 }
 
 interface Props {
@@ -19,6 +20,7 @@ export default function EventReport({ userId }: Props) {
   const [reports, setReports] = useState<Report[]>([]);
   const [content, setContent] = useState("");
   const [logType, setLogType] = useState<"normal" | "emergency">("normal");
+  const [location, setLocation] = useState(""); // new location state
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   async function fetchReports() {
@@ -36,6 +38,7 @@ export default function EventReport({ userId }: Props) {
         content: data.content,
         logType: data.logType,
         timestamp: data.timestamp.toDate(),
+        location: data.location || "Unknown location", // fallback if no location
       });
     });
     setReports(fetchedReports);
@@ -50,16 +53,23 @@ export default function EventReport({ userId }: Props) {
       alert("Please enter your report.");
       return;
     }
+    if (location.trim() === "") {
+      alert("Please enter the location of the event.");
+      return;
+    }
+
     setIsSubmitting(true);
     try {
       await addDoc(collection(db, "eventReports"), {
         uid: userId,
         content: content.trim(),
         logType,
+        location: location.trim(),  // save location here
         timestamp: Timestamp.fromDate(new Date()),
       });
       setContent("");
       setLogType("normal");
+      setLocation(""); // reset location input
       await fetchReports();
     } catch (error) {
       alert("Error submitting report: " + error);
@@ -77,6 +87,16 @@ export default function EventReport({ userId }: Props) {
         onChange={e => setContent(e.target.value)}
         placeholder="Enter your report here..."
         rows={4}
+        className="w-full border border-gray-300 rounded p-2 mb-3"
+        disabled={isSubmitting}
+      />
+
+      {/* New Location input */}
+      <input
+        type="text"
+        value={location}
+        onChange={e => setLocation(e.target.value)}
+        placeholder="Enter event location"
         className="w-full border border-gray-300 rounded p-2 mb-3"
         disabled={isSubmitting}
       />
@@ -117,6 +137,8 @@ export default function EventReport({ userId }: Props) {
             >
               <strong>{report.logType === "emergency" ? "🚨 Emergency" : "Normal"} Report</strong>
               <p className="whitespace-pre-wrap">{report.content}</p>
+              {/* Show location */}
+              <small className="block text-gray-600 font-medium">Location: {report.location}</small>
               <small className="text-gray-500">{report.timestamp.toLocaleString()}</small>
             </li>
           ))}
