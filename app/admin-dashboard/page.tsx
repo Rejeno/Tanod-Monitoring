@@ -1,6 +1,7 @@
 "use client";
 
 import { db } from "@/lib/firebase";
+import { auth } from "@/lib/firebase"; // make sure you export `auth` from firebase config
 import {
   collection,
   getDocs,
@@ -8,12 +9,14 @@ import {
   query,
   where,
 } from "firebase/firestore";
+import { signOut } from "firebase/auth";
 import Link from "next/link";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 
 interface EmergencyReport {
   id: string;
-  uid: string; // tanod user id who reported
+  uid: string;
   description: string;
   location: string;
   timestamp: Date;
@@ -25,11 +28,23 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const router = useRouter();
+
+  // Logout handler
+  const handleLogout = async () => {
+    try {
+      await signOut(auth);
+      router.push("/"); // redirect to login page or landing page
+    } catch (err) {
+      console.error("Logout failed", err);
+    }
+  };
+
   useEffect(() => {
     async function fetchData() {
       try {
         setLoading(true);
-        // 1. Fetch emergency reports ordered by timestamp descending
+
         const reportsQuery = query(
           collection(db, "eventReports"),
           where("logType", "==", "emergency"),
@@ -37,7 +52,6 @@ export default function AdminDashboard() {
         );
         const reportsSnapshot = await getDocs(reportsQuery);
 
-        // Map docs to array of reports
         const reportsData: EmergencyReport[] = reportsSnapshot.docs.map(doc => {
           const data = doc.data();
           return {
@@ -51,14 +65,12 @@ export default function AdminDashboard() {
 
         setEmergencyReports(reportsData);
 
-        // 2. Fetch all tanods for name resolution
         const allTanodsQuery = query(
           collection(db, "users"),
           where("role", "==", "tanod")
         );
         const usersSnapshot = await getDocs(allTanodsQuery);
 
-        // Map uid => displayName
         const namesMap: Record<string, string> = {};
         usersSnapshot.forEach(doc => {
           const data = doc.data();
@@ -78,60 +90,88 @@ export default function AdminDashboard() {
   }, []);
 
   return (
-    <div className="max-w-md mx-auto p-4 min-h-screen bg-white flex flex-col">
+    <div className="max-w-3xl mx-auto min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 p-6 rounded-xl shadow-lg border border-gray-200">
       <header className="mb-6">
-        <h1 className="text-2xl font-bold text-center mb-4">
-          Admin Dashboard - Emergency Reports
-        </h1>
-        <nav className="flex justify-center space-x-4">
+        {/* Header row with icon, title, and logout */}
+        <div className="flex items-center justify-between mb-6">
+          {/* Left: Icon + Title */}
+          <div className="flex items-center space-x-4">
+            <div className="w-16 h-16 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold text-2xl shadow-md">
+              🛡️
+            </div>
+            <div>
+              <h1 className="text-2xl font-bold text-gray-800">Admin Dashboard</h1>
+              <p className="text-gray-500 text-sm">Emergency Reports Monitoring</p>
+            </div>
+          </div>
+
+          {/* Right: Logout */}
+          <button
+            onClick={handleLogout}
+            className="bg-red-600 text-white px-4 py-2 rounded-lg shadow hover:bg-red-700 active:scale-95 transition transform"
+          >
+            Logout
+          </button>
+        </div>
+
+        {/* Navigation */}
+        <nav className="flex justify-center space-x-4 mb-4">
           <Link
             href="/tanod-list"
-            className="bg-blue-600 text-white px-4 py-2 rounded shadow hover:bg-blue-700 transition"
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 active:scale-95 transition transform"
           >
             Tanods
           </Link>
           <Link
             href="/report-list"
-            className="bg-blue-600 text-white px-4 py-2 rounded shadow hover:bg-blue-700 transition"
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg shadow hover:bg-blue-700 active:scale-95 transition transform"
           >
             Reports
           </Link>
         </nav>
       </header>
 
+
       {loading && (
-        <p className="text-center text-gray-600">Loading emergency reports...</p>
+        <p className="text-center text-gray-600 italic">Loading emergency reports...</p>
       )}
       {error && (
-        <p className="text-center text-red-600 font-semibold">{error}</p>
+        <p className="text-center text-red-600 font-semibold bg-red-50 border border-red-300 p-2 rounded">
+          {error}
+        </p>
       )}
 
       {!loading && !error && (
         <>
           {emergencyReports.length === 0 ? (
-            <p className="text-center text-gray-600">
+            <p className="text-center text-gray-600 italic">
               No emergency reports found.
             </p>
           ) : (
-            <ul className="space-y-4 overflow-y-auto" style={{ maxHeight: "70vh" }}>
+            <ul className="space-y-4 overflow-y-auto pr-2" style={{ maxHeight: "70vh" }}>
               {emergencyReports.map((report) => (
                 <li
                   key={report.id}
-                  className="border rounded p-4 bg-red-50 border-red-400 shadow-sm"
+                  className="border rounded-lg p-4 bg-red-50 border-red-300 shadow hover:shadow-md transition"
                 >
                   <div className="flex justify-between items-center mb-2">
-                    <h2 className="text-lg font-semibold text-red-700">
+                    <h2 className="text-lg font-semibold text-red-700 flex items-center">
                       🚨 Emergency Report
                     </h2>
                     <time className="text-sm text-gray-500">
                       {report.timestamp.toLocaleString()}
                     </time>
                   </div>
-                  <p className="mb-2 text-gray-800">{report.description}</p>
+                  <p className="mb-2 text-gray-800 leading-snug">{report.description}</p>
                   <p className="text-sm text-gray-700 font-medium">
-                    From: {tanodNames[report.uid] || report.uid}
+                    From:{" "}
+                    <span className="text-gray-900">
+                      {tanodNames[report.uid] || report.uid}
+                    </span>
                   </p>
-                  <p className="text-sm text-gray-600">Location: {report.location}</p>
+                  <p className="text-sm text-gray-600">
+                    Location: <span className="font-medium">{report.location}</span>
+                  </p>
                 </li>
               ))}
             </ul>

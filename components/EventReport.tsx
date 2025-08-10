@@ -79,67 +79,86 @@ export default function EventReport({ userId }: Props) {
   }
 
   return (
-    <div className="mt-8 p-4 border rounded-md shadow-sm bg-white">
-      <h2 className="text-xl font-semibold mb-4">Submit Event Report</h2>
+    <div className="mt-10 max-w-2xl mx-auto p-6 border border-gray-200 rounded-xl shadow-lg bg-white">
+      <h2 className="text-2xl font-bold mb-6 text-center text-gray-800">
+        Submit Event Report
+      </h2>
 
+      {/* Report Text Area */}
       <textarea
         value={content}
-        onChange={e => setContent(e.target.value)}
+        onChange={(e) => setContent(e.target.value)}
         placeholder="Enter your report here..."
         rows={4}
-        className="w-full border border-gray-300 rounded p-2 mb-3"
+        className="w-full border border-gray-300 text-black rounded-lg p-3 mb-4 focus:outline-none focus:ring-2 focus:ring-blue-400 transition disabled:opacity-50"
         disabled={isSubmitting}
       />
 
-      {/* New Location input */}
+      {/* Location Input */}
       <input
         type="text"
         value={location}
-        onChange={e => setLocation(e.target.value)}
+        onChange={(e) => setLocation(e.target.value)}
         placeholder="Enter event location"
-        className="w-full border border-gray-300 rounded p-2 mb-3"
+        className="w-full border border-gray-300 text-black rounded-lg p-3 mb-4 focus:outline-none focus:ring-2 focus:ring-blue-400 transition disabled:opacity-50"
         disabled={isSubmitting}
       />
 
-      <div className="mb-4">
-        <label className="mr-2 font-semibold">Report Type:</label>
+      {/* Report Type Selector */}
+      <div className="mb-6 flex items-center space-x-3">
+        <label className="font-semibold text-gray-700">Report Type:</label>
         <select
           value={logType}
-          onChange={e => setLogType(e.target.value as "normal" | "emergency")}
+          onChange={(e) =>
+            setLogType(e.target.value as "normal" | "emergency")
+          }
           disabled={isSubmitting}
-          className="border border-gray-300 rounded px-2 py-1"
+          className="border border-gray-300 text-black rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 transition disabled:opacity-50"
         >
           <option value="normal">Normal</option>
           <option value="emergency">Emergency</option>
         </select>
       </div>
 
+      {/* Submit Button */}
       <button
         onClick={handleSubmit}
         disabled={isSubmitting}
-        className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded disabled:opacity-50"
+        className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg shadow-md font-semibold transition transform active:scale-95 disabled:opacity-50"
       >
         Submit Report
       </button>
 
-      <h3 className="mt-8 text-lg font-semibold">Report History</h3>
+      {/* Report History */}
+      <h3 className="mt-10 text-lg font-bold text-gray-700">Report History</h3>
       {reports.length === 0 ? (
-        <p className="mt-2 text-gray-600">No reports submitted yet.</p>
+        <p className="mt-3 text-gray-500 italic">No reports submitted yet.</p>
       ) : (
-        <ul className="mt-2 max-h-64 overflow-y-auto space-y-2">
+        <ul className="mt-4 max-h-64 overflow-y-auto space-y-3">
           {reports.map((report) => (
             <li
               key={report.id}
-              className={`p-3 border rounded ${
-                report.logType === "emergency" ? "bg-red-100 border-red-400 text-red-700" : "bg-gray-50"
-              }`}
+              className={`p-4 rounded-lg shadow-sm border transition ${report.logType === "emergency"
+                ? "bg-red-50 border-red-300"
+                : "bg-gray-50 border-gray-200"
+                }`}
               title={`Submitted on ${report.timestamp.toLocaleString()}`}
             >
-              <strong>{report.logType === "emergency" ? "🚨 Emergency" : "Normal"} Report</strong>
-              <p className="whitespace-pre-wrap">{report.content}</p>
-              {/* Show location */}
-              <small className="block text-gray-600 font-medium">Location: {report.location}</small>
-              <small className="text-gray-500">{report.timestamp.toLocaleString()}</small>
+              <strong
+                className={`block mb-1 ${report.logType === "emergency"
+                  ? "text-red-600"
+                  : "text-gray-800"
+                  }`}
+              >
+                {report.logType === "emergency" ? "🚨 Emergency Report" : "Normal Report"}
+              </strong>
+              <p className="whitespace-pre-wrap text-gray-700">{report.content}</p>
+              <small className="block mt-2 text-gray-600 font-medium">
+                Location: {report.location}
+              </small>
+              <small className="text-gray-500">
+                {report.timestamp.toLocaleString()}
+              </small>
             </li>
           ))}
         </ul>

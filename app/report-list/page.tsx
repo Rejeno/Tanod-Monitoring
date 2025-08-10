@@ -2,12 +2,12 @@
 
 import { db } from "@/lib/firebase";
 import {
-    collection,
-    getDocs,
-    orderBy,
-    query,
-    Timestamp,
-    where,
+  collection,
+  getDocs,
+  orderBy,
+  query,
+  Timestamp,
+  where,
 } from "firebase/firestore";
 import Link from "next/link"; // for client-side navigation
 import { useEffect, useState } from "react";
@@ -113,12 +113,12 @@ export default function ReportsPage() {
   }, [startDate, endDate]);
 
   return (
-    <div className="max-w-md mx-auto p-4 bg-white min-h-screen flex flex-col">
+    <div className="max-w-3xl mx-auto p-6 min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl shadow-lg border border-gray-200 flex flex-col">
       {/* Back Button */}
       <div className="mb-4">
         <Link
           href="/admin-dashboard"
-          className="inline-flex items-center text-blue-600 hover:text-blue-800 font-semibold"
+          className="inline-flex items-center text-blue-600 hover:text-blue-800 font-semibold transition"
           aria-label="Back to Admin Dashboard"
         >
           <svg
@@ -136,71 +136,87 @@ export default function ReportsPage() {
         </Link>
       </div>
 
-      <h1 className="text-2xl font-bold mb-4 text-center">Reports</h1>
+      {/* Page Title */}
+      <div className="flex flex-col items-center mb-6">
+        <div className="w-16 h-16 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold text-xl shadow-md">
+          📋
+        </div>
+        <h1 className="text-2xl font-bold text-gray-800 mt-4">Reports</h1>
+        <p className="text-gray-500 text-sm">View and filter barangay reports</p>
+      </div>
 
       {/* Date Filters */}
       <div className="flex flex-col sm:flex-row sm:space-x-4 mb-6">
         <label className="flex flex-col mb-4 sm:mb-0">
-          <span className="font-semibold mb-1">Start Date</span>
+          <span className="font-semibold mb-1 text-gray-700">Start Date</span>
           <input
             type="date"
             value={startDate}
             max={endDate || undefined}
             onChange={(e) => setStartDate(e.target.value)}
-            className="border border-gray-300 rounded px-3 py-2"
+            className="border border-gray-300 text-black rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
           />
         </label>
 
         <label className="flex flex-col">
-          <span className="font-semibold mb-1">End Date</span>
+          <span className="font-semibold mb-1 text-gray-700">End Date</span>
           <input
             type="date"
             value={endDate}
             min={startDate || undefined}
             onChange={(e) => setEndDate(e.target.value)}
-            className="border border-gray-300 rounded px-3 py-2"
+            className="border border-gray-300 text-black rounded-lg px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
           />
         </label>
       </div>
 
       {/* Loading and Error */}
-      {loading && <p className="text-center text-gray-500">Loading reports...</p>}
-      {error && <p className="text-center text-red-600">{error}</p>}
+      {loading && (
+        <p className="text-center text-gray-500 italic">Loading reports...</p>
+      )}
+      {error && (
+        <p className="text-center text-red-600 bg-red-50 border border-red-300 p-2 rounded">
+          {error}
+        </p>
+      )}
 
       {/* Reports List */}
       {!loading && !error && (
         <>
           {reports.length === 0 ? (
-            <p className="text-center text-gray-600">
+            <p className="text-center text-gray-600 italic">
               No reports found for selected dates.
             </p>
           ) : (
-            <ul className="space-y-4 overflow-y-auto" style={{ maxHeight: "60vh" }}>
+            <ul className="space-y-4 overflow-y-auto pr-2" style={{ maxHeight: "60vh" }}>
               {reports.map((report) => (
                 <li
                   key={report.id}
-                  className={`border rounded p-4 ${
-                    report.logType === "emergency"
-                      ? "bg-red-50 border-red-400"
-                      : "bg-gray-50 border-gray-300"
-                  }`}
+                  className={`border rounded-lg p-4 shadow hover:shadow-md transition ${report.logType === "emergency"
+                    ? "bg-red-50 border-red-300"
+                    : "bg-white border-gray-300"
+                    }`}
                 >
                   <div className="flex justify-between items-center mb-2">
-                    <span className="font-semibold text-lg">
-                      {report.logType === "emergency"
-                        ? "🚨 Emergency"
-                        : "Normal"}{" "}
-                      Report
+                    <span
+                      className={`font-semibold text-lg ${report.logType === "emergency"
+                        ? "text-red-700"
+                        : "text-gray-800"
+                        }`}
+                    >
+                      {report.logType === "emergency" ? "🚨 Emergency" : "Normal"} Report
                     </span>
                     <time className="text-sm text-gray-500">
                       {report.timestamp.toLocaleString()}
                     </time>
                   </div>
-                  <p className="mb-2">{report.description}</p>
+                  <p className="mb-2 text-gray-800">{report.description}</p>
                   <p className="text-sm text-gray-700 font-medium">
                     From: {tanodNames[report.uid] || report.uid}
                   </p>
-                  <p className="text-sm text-gray-600">Location: {report.location}</p>
+                  <p className="text-sm text-gray-600">
+                    Location: <span className="font-medium">{report.location}</span>
+                  </p>
                 </li>
               ))}
             </ul>
@@ -208,5 +224,6 @@ export default function ReportsPage() {
         </>
       )}
     </div>
+
   );
 }

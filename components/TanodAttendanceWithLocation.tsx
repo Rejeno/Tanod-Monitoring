@@ -101,27 +101,30 @@ export default function TanodAttendanceWithLocation({ userUid }: Props) {
   };
 
   return (
-    <div>
-      <h2 className="text-xl font-semibold mb-2">Attendance with Location</h2>
+    <div className="max-w-2xl mx-auto bg-white p-6 rounded-xl shadow-lg border border-gray-200">
+      <h2 className="text-2xl font-bold mb-4 text-gray-800 text-center">
+        Attendance with Location
+      </h2>
 
+      {/* Location Input */}
       <input
         type="text"
         placeholder="Enter your current location"
         value={location}
         onChange={(e) => setLocation(e.target.value)}
-        className="border px-3 py-2 rounded w-full mb-4"
+        className="border border-gray-300 text-black rounded-lg px-4 py-2 w-full mb-6 focus:outline-none focus:ring-2 focus:ring-blue-400 transition"
         disabled={isSaving}
       />
 
-      <div className="space-x-4 mb-6">
+      {/* Buttons */}
+      <div className="flex justify-center space-x-4 mb-8">
         <button
           onClick={() => handleTimeInOut("in")}
           disabled={!canTimeIn || isSaving}
-          className={`px-4 py-2 rounded text-white ${
-            canTimeIn
-              ? "bg-green-500 hover:bg-green-600"
-              : "bg-gray-400 cursor-not-allowed"
-          }`}
+          className={`px-6 py-2 rounded-lg shadow-md text-white font-semibold transition transform active:scale-95 ${canTimeIn
+            ? "bg-green-500 hover:bg-green-600"
+            : "bg-gray-400 cursor-not-allowed"
+            }`}
         >
           Time In
         </button>
@@ -129,25 +132,40 @@ export default function TanodAttendanceWithLocation({ userUid }: Props) {
         <button
           onClick={() => handleTimeInOut("out")}
           disabled={!canTimeOut || isSaving}
-          className={`px-4 py-2 rounded text-white ${
-            canTimeOut
-              ? "bg-red-500 hover:bg-red-600"
-              : "bg-gray-400 cursor-not-allowed"
-          }`}
+          className={`px-6 py-2 rounded-lg shadow-md text-white font-semibold transition transform active:scale-95 ${canTimeOut
+            ? "bg-red-500 hover:bg-red-600"
+            : "bg-gray-400 cursor-not-allowed"
+            }`}
         >
           Time Out
         </button>
       </div>
 
-      <h3 className="text-lg font-semibold mb-2">Recent Records</h3>
+      {/* Records */}
+      <h3 className="text-lg font-bold mb-3 text-gray-700">Recent Records</h3>
       {records.length === 0 ? (
-        <p>No records yet.</p>
+        <p className="text-gray-500 italic">No records yet.</p>
       ) : (
-        <ul className="list-disc pl-5 space-y-1">
+        <ul className="space-y-3">
           {records.map((rec) => (
-            <li key={rec.id}>
-              <strong>{rec.type === "in" ? "Time In" : "Time Out"}</strong> -{" "}
-              {rec.timestamp.toLocaleString()} - Location: {rec.location}
+            <li
+              key={rec.id}
+              className="bg-gray-50 border border-gray-200 p-4 rounded-lg shadow-sm hover:shadow transition"
+            >
+              <div className="flex justify-between items-center">
+                <span
+                  className={`font-semibold ${rec.type === "in" ? "text-green-600" : "text-red-600"
+                    }`}
+                >
+                  {rec.type === "in" ? "Time In" : "Time Out"}
+                </span>
+                <time className="text-sm text-gray-500">
+                  {rec.timestamp.toLocaleString()}
+                </time>
+              </div>
+              <p className="text-sm text-gray-600 mt-1">
+                Location: <span className="font-medium">{rec.location}</span>
+              </p>
             </li>
           ))}
         </ul>
