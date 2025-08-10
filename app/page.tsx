@@ -7,111 +7,59 @@ import {
   getRedirectResult,
   signInWithPopup,
   signInWithRedirect,
+  UserCredential,
 } from "firebase/auth";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 
 export default function LandingPage() {
-  const [loading, setLoading] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
   const router = useRouter();
   const auth = getAuth(app);
   const provider = new FacebookAuthProvider();
 
-  // Detect mobile devices on mount
+  // Handle redirect sign-in result (for mobile or popup-blocked browsers)
   useEffect(() => {
-    const mobileCheck =
-      /Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/i.test(
-        navigator.userAgent
-      );
-    setIsMobile(mobileCheck);
-  }, []);
-
-  // Handle redirect result (for desktop login flow)
-  useEffect(() => {
-    const checkRedirectResult = async () => {
+    const checkRedirect = async () => {
       try {
-        const result = await getRedirectResult(auth);
-        if (result?.user) {
-          console.log("Redirect login success:", result.user);
+        const result: UserCredential | null = await getRedirectResult(auth);
+        if (result && result.user) {
           router.push("/profile-setup");
         }
-      } catch (error) {
-        console.error("Error handling redirect result:", error);
+      } catch (err) {
+        console.error("Redirect login failed:", err);
       }
     };
-    checkRedirectResult();
+    checkRedirect();
   }, [auth, router]);
 
+  // Try popup login, fallback to redirect
   const handleFacebookLogin = async () => {
-    setLoading(true);
     try {
-      if (isMobile) {
-        // ✅ Mobile: Use popup
-        await signInWithPopup(auth, provider);
-        router.push("/profile-setup");
-      } else {
-        // ✅ Desktop: Use redirect flow
-        await signInWithRedirect(auth, provider);
-      }
+      await signInWithPopup(auth, provider);
+      router.push("/profile-setup");
     } catch (error: any) {
-      console.error("Login failed:", error);
-      alert("Login failed. Please try again later.");
-    } finally {
-      setLoading(false);
+      console.warn("Popup login failed, trying redirect...", error);
+      await signInWithRedirect(auth, provider);
     }
   };
 
   return (
-    <main className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-blue-50 to-blue-100 px-4">
-      <h1 className="text-4xl md:text-5xl font-bold text-blue-800 mb-4 text-center">
-        Welcome to Barangay Tanod Monitoring
-      </h1>
-      <p className="text-gray-600 mb-8 text-center max-w-lg">
-        Keep your community safe and connected — anywhere, anytime.
-      </p>
-
-      <button
-        onClick={handleFacebookLogin}
-        disabled={loading}
-        className="flex items-center gap-3 px-6 py-3 bg-blue-600 text-white rounded-lg shadow-lg hover:bg-blue-700 transition-transform hover:scale-105 disabled:opacity-50"
-      >
-        {loading ? (
-          <span>Loading...</span>
-        ) : (
-          <>
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              fill="white"
-              viewBox="0 0 24 24"
-              className="w-6 h-6"
-            >
-              <path d="M22.676 0H1.326C.594 0 0 .593 0 1.326v21.348C0 23.406.594 24 1.326 24H12.82v-9.293H9.692V11.08h3.128V8.413c0-3.1 1.894-4.788 4.659-4.788 1.325 0 2.463.099 2.794.143v3.24h-1.918c-1.505 0-1.797.716-1.797 1.766v2.316h3.594l-.468 3.627h-3.126V24h6.128C23.406 24 24 23.406 24 22.674V1.326C24 .593 23.406 0 22.676 0" />
-            </svg>
-            Continue with Facebook
-          </>
-        )}
-      </button>
-
-      <footer className="mt-12 text-xs text-gray-500 text-center">
-        By continuing, you agree to our{" "}
-        <a
-          href="/privacy-policy"
-          className="underline hover:text-blue-700"
-          target="_blank"
+    <main className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 p-6">
+      <div className="max-w-lg w-full bg-white rounded-2xl shadow-lg p-8 text-center">
+        <h1 className="text-3xl font-bold text-gray-800 mb-4">
+          Welcome to Our App
+        </h1>
+        <p className="text-gray-600 mb-8">
+          Connect with Facebook to get started. We’ll help set up your profile
+          and take you to the right dashboard.
+        </p>
+        <button
+          onClick={handleFacebookLogin}
+          className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-all duration-200 w-full"
         >
-          Privacy Policy
-        </a>{" "}
-        and{" "}
-        <a
-          href="/data-deletion"
-          className="underline hover:text-blue-700"
-          target="_blank"
-        >
-          Data Deletion Policy
-        </a>
-        .
-      </footer>
+          Continue with Facebook
+        </button>
+      </div>
     </main>
   );
 }
