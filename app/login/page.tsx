@@ -2,7 +2,14 @@
 "use client";
 
 import app from "@/lib/firebase";
-import { FacebookAuthProvider, getAuth, signInWithRedirect } from "firebase/auth";
+import {
+  FacebookAuthProvider,
+  getAuth,
+  getRedirectResult,
+  signInWithPopup,
+  signInWithRedirect,
+  UserCredential,
+} from "firebase/auth";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
@@ -11,27 +18,29 @@ export default function LoginPage() {
   const auth = getAuth(app);
   const provider = new FacebookAuthProvider();
 
-  // Handle redirect result after returning from Facebook
+  // ✅ Handle redirect sign-in result
   useEffect(() => {
-    import("firebase/auth").then(({ getRedirectResult }) => {
-      getRedirectResult(auth)
-        .then((result) => {
-          if (result?.user) {
-            // User is signed in, redirect
-            router.push("/profile-setup");
-          }
-        })
-        .catch((error) => {
-          console.error("Redirect login failed:", error);
-        });
-    });
+    const checkRedirect = async () => {
+      try {
+        const result: UserCredential | null = await getRedirectResult(auth);
+        if (result && result.user) {
+          router.push("/profile-setup");
+        }
+      } catch (err) {
+        console.error("Redirect login failed:", err);
+      }
+    };
+    checkRedirect();
   }, [auth, router]);
 
+  // ✅ Try Popup, fallback to Redirect if needed
   const handleFacebookLogin = async () => {
     try {
+      await signInWithPopup(auth, provider);
+      router.push("/profile-setup");
+    } catch (error: any) {
+      console.warn("Popup login failed, trying redirect...", error);
       await signInWithRedirect(auth, provider);
-    } catch (error) {
-      console.error("Login failed:", error);
     }
   };
 
