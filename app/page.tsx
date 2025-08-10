@@ -4,6 +4,7 @@ import app from "@/lib/firebase";
 import {
   FacebookAuthProvider,
   getAuth,
+  getRedirectResult,
   signInWithPopup,
   signInWithRedirect,
 } from "firebase/auth";
@@ -17,7 +18,7 @@ export default function LandingPage() {
   const auth = getAuth(app);
   const provider = new FacebookAuthProvider();
 
-  // Detect mobile devices once on mount
+  // Detect mobile devices on mount
   useEffect(() => {
     const mobileCheck =
       /Android|iPhone|iPad|iPod|Opera Mini|IEMobile|WPDesktop/i.test(
@@ -26,19 +27,33 @@ export default function LandingPage() {
     setIsMobile(mobileCheck);
   }, []);
 
+  // Handle redirect result (for desktop login flow)
+  useEffect(() => {
+    const checkRedirectResult = async () => {
+      try {
+        const result = await getRedirectResult(auth);
+        if (result?.user) {
+          console.log("Redirect login success:", result.user);
+          router.push("/profile-setup");
+        }
+      } catch (error) {
+        console.error("Error handling redirect result:", error);
+      }
+    };
+    checkRedirectResult();
+  }, [auth, router]);
+
   const handleFacebookLogin = async () => {
     setLoading(true);
     try {
       if (isMobile) {
-        // ✅ Mobile: Use popup to avoid cross-origin iframe storage issues
+        // ✅ Mobile: Use popup
         await signInWithPopup(auth, provider);
+        router.push("/profile-setup");
       } else {
-        // ✅ Desktop: Use redirect for smoother flow
+        // ✅ Desktop: Use redirect flow
         await signInWithRedirect(auth, provider);
-        return; // Don't push route immediately; redirect handles it
       }
-      // Push to next page after successful sign-in
-      router.push("/profile-setup");
     } catch (error: any) {
       console.error("Login failed:", error);
       alert("Login failed. Please try again later.");
@@ -49,7 +64,6 @@ export default function LandingPage() {
 
   return (
     <main className="flex flex-col items-center justify-center min-h-screen bg-gradient-to-b from-blue-50 to-blue-100 px-4">
-      {/* Logo / App Name */}
       <h1 className="text-4xl md:text-5xl font-bold text-blue-800 mb-4 text-center">
         Welcome to Barangay Tanod Monitoring
       </h1>
@@ -57,7 +71,6 @@ export default function LandingPage() {
         Keep your community safe and connected — anywhere, anytime.
       </p>
 
-      {/* Login Button */}
       <button
         onClick={handleFacebookLogin}
         disabled={loading}
@@ -80,7 +93,6 @@ export default function LandingPage() {
         )}
       </button>
 
-      {/* Footer */}
       <footer className="mt-12 text-xs text-gray-500 text-center">
         By continuing, you agree to our{" "}
         <a
