@@ -22,6 +22,8 @@ export default function EventReport({ userId }: Props) {
   const [logType, setLogType] = useState<"normal" | "emergency">("normal");
   const [location, setLocation] = useState(""); // new location state
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [reportDate, setReportDate] = useState("");
+  const [reportTime, setReportTime] = useState("");
 
   async function fetchReports() {
     const q = query(
@@ -65,11 +67,16 @@ export default function EventReport({ userId }: Props) {
         content: content.trim(),
         logType,
         location: location.trim(),  // save location here
-        timestamp: Timestamp.fromDate(new Date()),
+        timestamp: reportDate && reportTime
+          ? Timestamp.fromDate(new Date(`${reportDate}T${reportTime}:00`))
+          : Timestamp.fromDate(new Date()), // fallback if no date/time picked
+
       });
       setContent("");
       setLogType("normal");
       setLocation(""); // reset location input
+      setReportDate(""); // reset date picker
+      setReportTime(""); // reset time picker
       await fetchReports();
     } catch (error) {
       alert("Error submitting report: " + error);
@@ -119,6 +126,25 @@ export default function EventReport({ userId }: Props) {
           <option value="emergency">Emergency</option>
         </select>
       </div>
+
+      {/* Report Date Input */}
+      <label className="font-semibold text-gray-700">Date:</label>
+      <input
+        type="date"
+        value={reportDate}
+        onChange={(e) => setReportDate(e.target.value)}
+        className="w-full border border-gray-300 text-black rounded-lg p-3 mb-4 focus:outline-none focus:ring-2 focus:ring-blue-400 transition disabled:opacity-50"
+        disabled={isSubmitting}
+      />
+      {/* Report Time Input */}
+      <label className="font-semibold text-gray-700">Time:</label>
+      <input
+        type="time"
+        value={reportTime}
+        onChange={(e) => setReportTime(e.target.value)}
+        className="w-full border border-gray-300 text-black rounded-lg p-3 mb-4 focus:outline-none focus:ring-2 focus:ring-blue-400 transition disabled:opacity-50"
+        disabled={isSubmitting}
+      />
 
       {/* Submit Button */}
       <button
